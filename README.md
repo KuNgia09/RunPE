@@ -1,5 +1,6 @@
 # FilelessRemotePE
-Loading Fileless Remote PE from URI to memory with argument passing  and ETW patching and NTDLL unhooking and No New Thread technique
+Loading Fileless Remote PE from URI to memory with argument passing  and ETW patching and NTDLL unhooking and No New Thread technique  
+It runs only c/c++/asm based binaries , if you want to run .NET based binaries use my other project : https://github.com/D1rkMtr/ExecRemoteAssembly  
 
 ![ThisFileLess](https://user-images.githubusercontent.com/110354855/191484108-e248a597-e5d9-4a21-8842-5e4e8df2c41d.png)
 
