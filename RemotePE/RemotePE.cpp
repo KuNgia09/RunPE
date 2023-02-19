@@ -292,8 +292,8 @@ void PELoader(char* data, const long long datasize)
     else {
         //printf("  -- 2 GET API NtUnmapViewOfSection from ntdll.dll\n");
         HMODULE dll = LoadLibraryA("ntdll.dll");
-        int unmapResult = ((int(WINAPI*)(HANDLE, PVOID))GetProcAddress(dll, "NtUnmapViewOfSection"))((HANDLE)-1, (LPVOID)ntHeader->OptionalHeader.ImageBase);
-        printf("[+]unmapResult:%x\n", unmapResult);
+        ((int(WINAPI*)(HANDLE, PVOID))GetProcAddress(dll, "NtUnmapViewOfSection"))((HANDLE)-1, (LPVOID)ntHeader->OptionalHeader.ImageBase);
+        
 
         //printf("  -- 3 VirtualAlloc Memory\n");
         pImageBase = (BYTE*)VirtualAlloc(preferAddr, ntHeader->OptionalHeader.SizeOfImage, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
@@ -329,7 +329,7 @@ void PELoader(char* data, const long long datasize)
     //Fix Relocation table
     if (pImageBase != preferAddr) {
         if (myApplyReloc((ULONG_PTR)pImageBase, (ULONG_PTR)preferAddr)) {
-            printf("[+] Relocation Fixed.");
+            printf("[+]Relocation Fixed.");
         }
     }
 
