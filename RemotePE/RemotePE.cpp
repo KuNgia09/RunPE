@@ -280,8 +280,8 @@ void PELoader(char* data, const long long datasize)
 
     IMAGE_DATA_DIRECTORY* relocDir = GetPEDirectory(data, IMAGE_DIRECTORY_ENTRY_BASERELOC);
     preferAddr = (LPVOID)ntHeader->OptionalHeader.ImageBase;
-    printf("[+]current process ImageBase:%p\n", GetModuleHandle(NULL));
-    printf("[+]preferAddr:%p\n", (LPVOID)ntHeader->OptionalHeader.ImageBase);
+    printf("[+]Current process ImageBase:%p\n", GetModuleHandle(NULL));
+    printf("[+]New exe preferAddr:%p\n", (LPVOID)ntHeader->OptionalHeader.ImageBase);
     if (preferAddr == GetModuleHandle(NULL)) {
         pImageBase = (BYTE*)VirtualAlloc(NULL, ntHeader->OptionalHeader.SizeOfImage, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
         if (!pImageBase || !relocDir)
@@ -329,7 +329,7 @@ void PELoader(char* data, const long long datasize)
     //Fix Relocation table
     if (pImageBase != preferAddr) {
         if (myApplyReloc((ULONG_PTR)pImageBase, (ULONG_PTR)preferAddr)) {
-            printf("[+]Relocation Fixed.");
+            printf("[+]Relocation Fixed ");
         }
     }
 

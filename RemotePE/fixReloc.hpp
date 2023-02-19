@@ -29,7 +29,7 @@ bool myApplyReloc(ULONG_PTR uiBaseAddress, ULONG_PTR uiPreferAddress) {
 	
 	// calculate the base address delta and perform relocations (even if we load at desired image base)
 	uiLibraryAddress = uiBaseAddress - uiPreferAddress;
-	printf("[+]uiHeaderValue:%x,uiLibraryAddress delta:%x\n", uiHeaderValue, uiLibraryAddress);
+	//printf("[+]uiHeaderValue:%x,uiLibraryAddress delta:%x\n", uiHeaderValue, uiLibraryAddress);
 	// uiValueB = the address of the relocation directory
 	uiValueB = (ULONG_PTR) & ((PIMAGE_NT_HEADERS)uiHeaderValue)->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
 
