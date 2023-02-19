@@ -10,7 +10,6 @@
 #include <string.h>
 #include <metahost.h> 
 #include <evntprov.h>
-#include"peBase.hpp"
 #include"fixReloc.hpp"
 
 #pragma warning (disable: 4996)
