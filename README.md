@@ -2,6 +2,13 @@
 Loading Fileless Remote PE from URI to memory with argument passing  and ETW patching and NTDLL unhooking and No New Thread technique  
 It runs only c/c++/asm based binaries , if you want to run .NET based binaries use my other project : https://github.com/D1rkMtr/ExecRemoteAssembly  
 
+
+
+# Add PE Relocation Fix Function
+添加了重定位功能，由于RemotePE的ImageBase可能与自身PE的模块基址相同，不能调用ZwUnmapViewOfSection来unmap内存，否则会导致unmap 自身exe代码，造成内存访问异常
+如果RemotePE的加载地址和它的ImageBase地址不同，则需要重定位
+
+
 ![ThisFileLess](https://user-images.githubusercontent.com/110354855/191484108-e248a597-e5d9-4a21-8842-5e4e8df2c41d.png)
 
 As shown in the Image:    
