@@ -142,6 +142,10 @@
   <ItemGroup>
     <ClCompile Include="RemotePE.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="fixReloc.hpp" />
+    <ClInclude Include="peBase.hpp" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

